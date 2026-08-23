@@ -127,9 +127,16 @@ export function Landing() {
 
       <section id="author" className="author" aria-label="About the author">
         <div className="author-inner">
-          <h2 className="author-title">About Me</h2>
+          <h2 className="author-title">About the author</h2>
           <p className="author-body">
-            Edward Kang - Github @edk12564
+            Edward Kang - Github{' '}
+            <a
+              href="https://github.com/edk12564"
+              target="_blank"
+              rel="noreferrer"
+            >
+              @edk12564
+            </a>
             <br />
             Open Source Contributor @Apache Software Foundation
           </p>
