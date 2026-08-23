@@ -5,8 +5,9 @@ export const siteConfig = {
   description: 'TODO: fill in project description',
   repoUrl: 'https://github.com/apache/fineract-consumer-facing',
   upstreamUrl: 'https://fineract.apache.org',
-  // Replace with a hosted URL before deploying — public/demo/ is gitignored (file too large).
-  demoVideoUrl: `${import.meta.env.BASE_URL}demo/FineractConsumerFacingDemo.mov`,
+  // Google Drive embed for now — swap src to a YouTube embed URL later.
+  demoVideoUrl:
+    'https://drive.google.com/file/d/1IozrFn3b35oQaVSWzLV-pxSq1EMBmARP/preview',
 };
 
 export type SiteConfig = typeof siteConfig;

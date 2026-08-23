@@ -49,7 +49,7 @@ export function Landing() {
           <p className="arch-sub">
             The frontend never talks to Fineract directly. The BFF is the
             single policy enforcement point between consumers and core banking.
-            The BFF provides self-service capabilities.
+            The BFF provides self-service capabilities and security.
           </p>
           <div className="arch-flow">
             <div className="arch-col-left">
@@ -120,7 +120,12 @@ export function Landing() {
             A walkthrough of the consumer banking experience end to end
           </p>
           <div className="demo-panel">
-            <video controls preload="metadata" src={siteConfig.demoVideoUrl} />
+            <iframe
+              src={siteConfig.demoVideoUrl}
+              title="Demo video"
+              allow="fullscreen"
+              allowFullScreen
+            />
           </div>
         </div>
       </section>
