@@ -1,0 +1,415 @@
+
+<h2 id="_development">Development</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This chapter covers the day-to-day developer workflow. It explains how to build the backend and frontend, run unit and end-to-end tests, regenerate the API clients, and run the demo stack locally.</p>
+</div>
+<div class="sect2">
+<h3 id="_build_and_test">Build and Test</h3>
+<div class="paragraph">
+<p>This section describes the developer workflow for the consumer-facing BFF (backend-for-frontend, the Spring Boot service in <code>consumer/</code> that sits between the Angular client and Fineract Core) and the Angular demo client in <code>frontend/</code>.</p>
+</div>
+<div class="sect3">
+<h4 id="_prerequisites">Prerequisites</h4>
+<div class="ulist">
+<ul>
+<li>
+<p>JDK 21. The Gradle build declares a Java toolchain of 21 in <code>consumer/build.gradle</code>, and CI builds with JDK 21. Gradle itself is provided by the checked-in wrapper (<code>./gradlew</code>, Gradle 8.14.4), so no separate Gradle install is needed.</p>
+</li>
+<li>
+<p>Docker with Compose v2. Every backend test run starts the full stack (BFF, Fineract, two PostgreSQL databases, Valkey, Mailpit) with <code>docker compose</code>.</p>
+</li>
+<li>
+<p>Node 22 and npm 10 or newer for the frontend. <code>frontend/package.json</code> pins <code>"node": "&gt;=22.0.0 &lt;23.0.0"</code>, and <code>frontend/.nvmrc</code> contains <code>22</code>.</p>
+</li>
+<li>
+<p><code>openssl</code>, used once to generate the development JWT signing key.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Before the first backend stack start, generate the development JWT signing key (a JSON Web Token is the signed access token the BFF issues to clients; the stack mounts this key into the BFF container):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">cd </span>consumer
+./scripts/generate-dev-jwt-key.sh</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The script is idempotent: it writes <code>consumer/dev-jwt-key.pem</code> and leaves an existing key untouched.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_the_local_docker_stack">The local Docker stack</h4>
+<div class="paragraph">
+<p>The stack is defined in <code>consumer/compose.yaml</code> and is the only local test environment: there is no embedded database or mocked Fineract. It runs:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>bff</code> on host port 8080, the system under test</p>
+</li>
+<li>
+<p><code>fineract</code> (Apache Fineract 1.12.1) on host port 8888</p>
+</li>
+<li>
+<p><code>bff-db</code> (PostgreSQL) on 5432 and <code>fineract-db</code> on 5433</p>
+</li>
+<li>
+<p><code>valkey</code> (a Redis-compatible key-value store) on 6379</p>
+</li>
+<li>
+<p><code>mailpit</code> (a development SMTP catcher; OTP emails land in a web inbox) on 8025</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The compose stack exists for development and demo use. Real providers implement their own production stack: DDoS protection, per-IP rate limiting, and external key storage such as a KMS are deployment concerns that sit outside what the dev stack provides. The same applies to storage: the stack&#8217;s databases run on tmpfs (in-memory storage), which is useful for local development and tests, and real deployments use volumes instead.</p>
+</div>
+<div class="paragraph">
+<p>Every backend command follows the same pattern: bring the stack up, run the Gradle task, tear the stack down with <code>-v</code>. The <code>-v</code> flag removes the volumes together with the containers, so the next run starts from a clean database instead of inheriting state from the previous one. The first <code>up</code> takes roughly two minutes because Fineract is slow to boot; later runs are faster.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_backend_unit_tests">Backend unit tests</h4>
+<div class="paragraph">
+<p>Unit tests are JUnit 5 tests that mock at service and port interfaces. Run from <code>consumer/</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">cd </span>consumer
+docker compose up <span class="nt">-d</span> <span class="nt">--build</span> <span class="nt">--wait</span> <span class="o">&amp;&amp;</span> ./gradlew <span class="nb">test</span><span class="p">;</span> docker compose down <span class="nt">-v</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The test source set compiles against the generated Java API client (see the OpenAPI pipeline below), and generating that client requires the stack: the <code>openapi</code> task scrapes the spec from the running application. The <code>test</code> task itself does not regenerate the client. On a fresh checkout, run <code>./gradlew generateJavaClient</code> once with the stack up; once <code>consumer/build/generated/java-client</code> exists, <code>./gradlew test</code> runs with the stack down.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_backend_end_to_end_tests_cucumber">Backend end-to-end tests (Cucumber)</h4>
+<div class="paragraph">
+<p>Cucumber is a behavior-driven test framework: plain-text <code>.feature</code> files describe scenarios, and Java "step glue" classes execute them as real HTTP requests against the BFF container at <code><a href="http://localhost:8080" class="bare">http://localhost:8080</a></code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">cd </span>consumer
+docker compose up <span class="nt">-d</span> <span class="nt">--build</span> <span class="nt">--wait</span> <span class="o">&amp;&amp;</span> ./gradlew cucumber<span class="p">;</span> docker compose down <span class="nt">-v</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Feature files cover registration, login, savings, loans, transfers, beneficiaries, summary, profile, password, audit, open banking, rate limiting, and ABAC denial paths.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_openapi_pipeline_and_generated_clients">OpenAPI pipeline and generated clients</h4>
+<div class="paragraph">
+<p>OpenAPI is a machine-readable description of an HTTP API. The BFF&#8217;s spec is not written by hand: springdoc generates it from the running application, and the <code>openapi</code> Gradle task scrapes it from <code><a href="http://localhost:8080/v3/api-docs" class="bare">http://localhost:8080/v3/api-docs</a></code> into <code>consumer/build/openapi/openapi.json</code>. The stack must therefore be up for any task in this pipeline.</p>
+</div>
+<div class="paragraph">
+<p>Two clients are generated from that spec:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>generateJavaClient</code> produces a Java Feign client (Feign is a declarative HTTP client library) in <code>consumer/build/generated/java-client</code>. The Cucumber test harness compiles against it.</p>
+</li>
+<li>
+<p><code>generateTypescriptClient</code> produces a TypeScript Angular client in <code>frontend/src/openapi-client</code>, imported by the frontend under the path alias <code>@bff/client</code>.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Always delete the old output directory first. The generator only adds and overwrites files; it does not remove files for endpoints that no longer exist, so stale services linger otherwise. Both directories are gitignored generated output, so nothing tracked by git is at risk. Run from <code>consumer/</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">cd </span>consumer
+
+<span class="c"># Java client (Cucumber test harness)</span>
+<span class="nb">rm</span> <span class="nt">-rf</span> build/generated/java-client
+docker compose up <span class="nt">-d</span> <span class="nt">--build</span> <span class="nt">--wait</span> <span class="o">&amp;&amp;</span> ./gradlew generateJavaClient<span class="p">;</span> docker compose down <span class="nt">-v</span>
+
+<span class="c"># TypeScript client (Angular app)</span>
+<span class="nb">rm</span> <span class="nt">-rf</span> ../frontend/src/openapi-client
+docker compose up <span class="nt">-d</span> <span class="nt">--build</span> <span class="nt">--wait</span> <span class="o">&amp;&amp;</span> ./gradlew generateTypescriptClient<span class="p">;</span> docker compose down <span class="nt">-v</span>
+
+<span class="c"># Both at once</span>
+<span class="nb">rm</span> <span class="nt">-rf</span> build/generated/java-client ../frontend/src/openapi-client
+docker compose up <span class="nt">-d</span> <span class="nt">--build</span> <span class="nt">--wait</span> <span class="o">&amp;&amp;</span> ./gradlew openapi generateClients<span class="p">;</span> docker compose down <span class="nt">-v</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>A separate task, <code>generateFineractClient</code>, generates the BFF&#8217;s own Feign client to Fineract Core from a vendored Fineract spec. It runs automatically as part of <code>compileJava</code> and needs no running stack.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_frontend_tests">Frontend tests</h4>
+<div class="paragraph">
+<p>Unit tests use Vitest (a fast test runner in the Vite ecosystem) through the Angular CLI. Specs are <code>.spec.ts</code> files colocated with the code under <code>frontend/src/app/</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">cd </span>frontend
+npm <span class="nb">test</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>End-to-end tests use Playwright (a browser automation framework) against the full dockerized stack, defined in <code>docker-compose.e2e.yml</code> at the repository root. That compose file includes <code>consumer/compose.yaml</code> and adds the nginx-served Angular app on port 4443. One command brings the stack up, regenerates the TypeScript client, runs the specs, and tears everything down with <code>-v</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">cd </span>frontend
+npm run e2e:stack:run</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_continuous_integration">Continuous integration</h4>
+<div class="paragraph">
+<p>The GitHub workflows in <code>.github/workflows/</code> run:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>build-tests-backend.yml</code>: on changes under <code>consumer/</code>, sets up JDK 21, generates the dev JWT key, starts the Docker stack, captures the OpenAPI spec and generates both clients (uploaded as artifacts), then runs <code>./gradlew test</code> and <code>./gradlew cucumber</code>, and tears down with <code>docker compose down -v</code>.</p>
+</li>
+<li>
+<p><code>build-tests-frontend.yml</code>: on changes under <code>frontend/</code>, <code>consumer/</code>, or the e2e compose file, runs two jobs. The unit job starts the backend, generates the TypeScript client, runs a production build (<code>npm run build</code>), and runs <code>npm test&#8201;&#8212;&#8201;--no-watch</code>. The e2e job brings up the full stack with <code>npm run e2e:docker:up</code>, runs <code>npm run e2e</code> (Playwright), and tears down with <code>-v</code>.</p>
+</li>
+<li>
+<p><code>prettier-eslint.yaml</code>: on changes under <code>frontend/</code>, runs <code>npm run lint</code> (ESLint) and <code>npm run format:check</code> (Prettier) against the frontend sources.</p>
+</li>
+<li>
+<p><code>category-x-check.yml</code>: two jobs. The backend job runs <code>./gradlew checkLicense</code> to gate Gradle dependency licenses against the ASF allowlist and warns on Category B licenses. The frontend job generates an npm license report with <code>license-checker-rseidelsohn</code> and checks it against <code>frontend/allowed-licenses.json</code> with the same Category A pass, Category B warn, otherwise fail rules.</p>
+</li>
+<li>
+<p><code>codeql.yml</code>: CodeQL static analysis on push, pull request, and a weekly schedule.</p>
+</li>
+<li>
+<p><code>apache-rat.yml</code>: Apache RAT scan for missing license headers.</p>
+</li>
+<li>
+<p><code>i18n-check.yml</code>: runs <code>npm run i18n:check</code> to verify frontend translation keys.</p>
+</li>
+<li>
+<p><code>pr-test-count.yml</code>: counts tests at the base and head of a pull request and posts a comparison comment.</p>
+</li>
+<li>
+<p><code>zizmor.yml</code> and <code>asf-allowlist-check.yml</code>: security linting of the GitHub workflows themselves and ASF contributor allowlist checks.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_where_tests_live">Where tests live</h4>
+<div class="ulist">
+<ul>
+<li>
+<p>Backend unit tests: <code>consumer/src/test/java/org/apache/fineract/consumer/</code>, mirroring the feature packages (<code>savings/</code>, <code>loans/</code>, <code>transfers/</code>, <code>openbanking/</code>, and so on).</p>
+</li>
+<li>
+<p>Cucumber feature files: <code>consumer/src/test/resources/features/</code>.</p>
+</li>
+<li>
+<p>Cucumber step glue: the <code>org.apache.fineract.consumer.cucumber</code> package (steps under <code>cucumber.steps</code>), configured as the glue path in <code>consumer/build.gradle</code>.</p>
+</li>
+<li>
+<p>Frontend unit specs: <code>*.spec.ts</code> files next to their subjects under <code>frontend/src/app/</code>.</p>
+</li>
+<li>
+<p>Playwright specs: <code>frontend/playwright/tests/</code>.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_design_rationale_24">Design rationale</h4>
+<div class="paragraph">
+<p>There is deliberately no test tier between unit and end-to-end: no Spring context slices, no Testcontainers, no mocked Fineract. Anything that needs real wiring runs against the same Docker stack that CI uses, which keeps local and CI behavior identical. Generating clients from the running app&#8217;s spec, rather than hand-writing them, makes the BFF contract the single source of truth for both test harness and frontend.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_limitations_and_future_work_22">Limitations and future work</h4>
+<div class="paragraph">
+<p>Full-stack runs are slow: the stack rebuilds and Fineract reboots on every cycle, so a single Cucumber run costs several minutes of setup. The client generation steps require manual <code>rm -rf</code> of previous output; the build does not clean stale files itself.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_running_the_demo">Running the Demo</h3>
+<div class="paragraph">
+<p>This section describes how to run the full application locally. The running stack consists of the BFF (backend-for-frontend), Apache Fineract, and the Angular client served through nginx.</p>
+</div>
+<div class="sect3">
+<h4 id="_start_the_stack">Start the stack</h4>
+<div class="paragraph">
+<p>All commands run from <code>frontend/</code>. The stack is defined in <code>docker-compose.e2e.yml</code> at the repository root, which includes the backend stack from <code>consumer/compose.yaml</code> and adds the nginx-served Angular app.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">cd </span>frontend
+npm run e2e:docker:up</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This command generates the development JWT signing key if it does not exist, builds and starts the backend containers, regenerates the TypeScript API client from the running BFF, then builds and starts the frontend container. The first start takes roughly two minutes because Fineract is slow to boot.</p>
+</div>
+<div class="paragraph">
+<p>Once up, the services are reachable at:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="http://localhost:4443" class="bare">http://localhost:4443</a>: the Angular app (nginx, container port 80 mapped to host 4443)</p>
+</li>
+<li>
+<p><a href="http://localhost:8080" class="bare">http://localhost:8080</a>: the BFF API</p>
+</li>
+<li>
+<p><a href="http://localhost:8025" class="bare">http://localhost:8025</a>: Mailpit, a development SMTP catcher. OTP emails (one-time passwords sent during registration and login) land here instead of a real inbox.</p>
+</li>
+<li>
+<p><a href="http://localhost:8888" class="bare">http://localhost:8888</a>: Fineract Core (admin API, credentials <code>mifos</code>/<code>password</code>)</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_seed_demo_data">Seed demo data</h4>
+<div class="paragraph">
+<p>The seeder stands in for the upstream back-office service: it creates verified client records in Fineract directly, then binds two of them to BFF users by driving the real registration endpoints, reading each OTP from Mailpit. It requires <code>jq</code> (a command-line JSON processor), the <code>docker</code> CLI (it inserts open banking TPP rows with <code>docker exec</code> into the <code>bff-db</code> container), and the stack to be up.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">../consumer/scripts/seed-demo.sh</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The script is idempotent: rerunning it skips clients that already exist.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_what_the_seeder_creates">What the seeder creates</h4>
+<div class="paragraph">
+<p>In Fineract:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>SSN and Aadhaar entries under the "Customer Identifier" code, a "Cash" payment type, a "Demo Savings" product (USD, 5% nominal annual interest), a "Demo Loan" product (USD, 12 monthly repayments, 2% interest per period), and three charge definitions: "Demo Client Fee" (25 USD), "Demo Savings Fee" (10 USD), and "Demo Loan Fee" (50 USD).</p>
+</li>
+<li>
+<p>Four active clients: John Doe, Alan Turing, Grace Hopper, and Katherine Johnson (external IDs <code>demo-client-1</code> through <code>demo-client-4</code>). Each client gets a government ID identifier (SSN or Aadhaar).</p>
+</li>
+<li>
+<p>Clients #1 (John Doe) and #2 (Alan Turing) get a small data set: one active savings account with a 1,000 deposit and one disbursed 10,000 loan with a single 900 repayment. They carry no charges or guarantors by design.</p>
+</li>
+<li>
+<p>Clients #3 (Grace Hopper) and #4 (Katherine Johnson) get a scaled data set each:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>10 savings accounts with opening deposits from 500 to 5,000, plus 10 further deposits and withdrawals spread over February to July 2024 and 10 savings-to-savings transfers between their own accounts (August to November 2024).</p>
+</li>
+<li>
+<p>10 loans: 7 active (disbursed), 2 pending approval, and 1 disbursed then repaid in full (closed). Each of the 7 active loans carries 25 repayments, 175 per client.</p>
+</li>
+<li>
+<p>3 client charges, 3 savings charges (on the first 3 savings accounts), and 3 loan charges (on the first 3 active loans).</p>
+</li>
+<li>
+<p>Guarantors wired between the two: each guarantees the other&#8217;s first pending loan with a 100 amount funded from savings, and each has two further loans with a plain guarantor (the other client on one, an external person on the other: Marcus Aurelius and Ada Lovelace).</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>In the BFF:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Two rows in the <code>registered_tpps</code> table (a TPP, third-party provider, is an external application granted consent-scoped access): <code>demo-tpp</code> ("Demo TPP", redirect <code><a href="http://localhost:9999/tpp/callback" class="bare">http://localhost:9999/tpp/callback</a></code>, used by the Cucumber tests) and <code>postman-tpp</code> ("Postman TPP", redirect <code><a href="https://oauth.pstmn.io/v1/callback" class="bare">https://oauth.pstmn.io/v1/callback</a></code>, used with Postman). Both are ACTIVE with scopes <code>openbanking:consents</code> and <code>openbanking:accounts.read</code>.</p>
+</li>
+<li>
+<p>Clients #3 (Grace Hopper) and #4 (Katherine Johnson) are bound to BFF login accounts through the real registration flow, including OTP verification.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_demo_credentials">Demo credentials</h4>
+<div class="paragraph">
+<p>The script prints a summary when it finishes: a per-client table (client IDs, savings and loan counts, login emails), a second table with charge, guarantor, and obligee counts for clients #3 and #4, and the two TPP registrations. The pre-bound logins are:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>demo3@example.com</code> (Grace Hopper) and <code>demo4@example.com</code> (Katherine Johnson), both with password <code>DemoPassw0rd!23</code>.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Clients #1 and #2 have no BFF user. Use them to demo the live registration flow; their identifier document keys are printed in the script source (<code>consumer/scripts/seed-demo.sh</code>) and the resulting OTP email appears in Mailpit.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_tear_down">Tear down</h4>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">cd </span>frontend
+npm run e2e:docker:down</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This runs <code>docker compose down -v</code>, which removes the containers and their volumes so the next start begins from a clean database.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_open_banking_demo_tokens">Open banking demo tokens</h4>
+<div class="paragraph">
+<p><code>consumer/scripts/seed-openbanking.sh</code> mints third-party access tokens for Postman by driving the real OAuth2 authorization-code flow with PKCE (Proof Key for Code Exchange, a challenge that prevents a stolen authorization code from being redeemed by anyone else) headlessly: TPP client-credentials token, consent creation, customer login with the emailed 2FA code read from Mailpit, consent approval, and code exchange. A TPP (third-party provider) is the external application granted read-only, consent-scoped access.</p>
+</div>
+<div class="paragraph">
+<p>It requires <code>jq</code>, the stack up, and <code>seed-demo.sh</code> already run, since it authenticates as a seeded TPP and as the seeded customer <code>demo3@example.com</code>. By default it uses the <code>postman-tpp</code> registration (redirect <code><a href="https://oauth.pstmn.io/v1/callback" class="bare">https://oauth.pstmn.io/v1/callback</a></code>). Run from the repository root:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">./consumer/scripts/seed-openbanking.sh</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To drive the Cucumber TPP registration instead, override all three variables to match its seeded row:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nv">TPP_CLIENT_ID</span><span class="o">=</span>demo-tpp <span class="se">\</span>
+<span class="nv">TPP_CLIENT_SECRET</span><span class="o">=</span>demo-tpp-secret <span class="se">\</span>
+<span class="nv">TPP_REDIRECT_URI</span><span class="o">=</span>http://localhost:9999/tpp/callback <span class="se">\</span>
+./consumer/scripts/seed-openbanking.sh</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>On success it prints values ready to paste into a Postman environment: <code>obClientId</code>, <code>obConsentId</code>, <code>obAccessToken</code>, and <code>obRefreshToken</code>, plus the granted scope and the access-token lifetime. Unlike <code>seed-demo.sh</code>, this script is not idempotent: every run creates a new consent row and a new token pair, leaving the previous consent behind.</p>
+</div>
+<div class="paragraph">
+<p>See Open banking for the consent model and endpoint surface.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_design_rationale_25">Design rationale</h4>
+<div class="paragraph">
+<p>The demo reuses the end-to-end test stack rather than a separate demo deployment, so what a demo audience sees is exactly what the tests exercise. The seeder binds users through the real registration endpoints instead of inserting rows directly, which keeps the seeded state indistinguishable from state produced by the application.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_limitations_and_future_work_23">Limitations and future work</h4>
+<div class="paragraph">
+<p>The stack is for development and demo use only. It runs cleartext HTTP on the Docker network, keeps a generated signing key on disk, and uses Mailpit in place of a real mail provider, so it should not be exposed beyond localhost. Real providers implement their own production stack (see the Build and Test section). Startup is slow because Fineract reboots from scratch each time.</p>
+</div>
+</div>
+</div>
+</div>

@@ -1,0 +1,373 @@
+
+<h2 id="_security">Security</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The Angular client holds no secrets and enforces no policy. Both jobs belong to the BFF (backend-for-frontend, the Spring Boot service in <code>consumer/</code>). Tokens live in cookies the page&#8217;s JavaScript cannot read, authorization decisions happen server side, and every client-side check described here is a convenience, not a defense. This chapter describes how the client cooperates with that model. It covers the session and token lifecycle as the client experiences it, the identifier the client presents for its device, the step-up challenges it drives for sensitive actions, and the way it keeps personal data out of browser storage and audit events. Each section names the BFF security section that holds the server half of the story.</p>
+</div>
+<div class="sect2">
+<h3 id="session">Session Model</h3>
+<div class="paragraph">
+<p>This section describes how the Angular client logs in, stays logged in, and is logged out under the BFF&#8217;s token model. The client never sees a token value. Both session tokens travel in httpOnly cookies (browser cookies that page JavaScript cannot read), set and read only by the BFF. The server half (token contents, lifetimes, rotation, and validation) is described in <code>docs/consumer/security/tokens.adoc</code>.</p>
+</div>
+<div class="paragraph">
+<p>The client code involved is <code>frontend/src/app/core/auth/auth.service.ts</code>, <code>core/interceptors/error.interceptor.ts</code>, <code>core/guards/auth.guard.ts</code>, <code>app.config.ts</code>, and <code>features/auth/login.component.ts</code>.</p>
+</div>
+<div class="sect3">
+<h4 id="_what_the_client_actually_holds">What the client actually holds</h4>
+<div class="paragraph">
+<p><code>AuthService</code> keeps exactly one piece of session state: a signal (an Angular reactive value that templates re-render from) named <code>sessionExpiresAt</code>, holding the access-token expiry timestamp the BFF returns in the 2FA and refresh response bodies. A computed <code>isAuthenticated</code> is simply <code>sessionExpiresAt() !== null</code>.</p>
+</div>
+<div class="paragraph">
+<p>Nothing else exists on the client: no token string, no user object, no entry in localStorage (a persistent key-value store in the browser). The cookies ride along automatically on every request because the browser attaches them; the client cannot inspect them even if it wanted to. A consequence worth knowing: <code>isAuthenticated</code> is a belief, not a fact. The authoritative check happens on the BFF for every request.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_login_is_two_steps">Login is two steps</h4>
+<div class="paragraph">
+<p><code>LoginComponent</code> drives the flow with a <code>step</code> signal (<code>credentials</code> or <code>otp</code>):</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>The credentials form posts email and password via <code>AuthService.login</code> (<code>POST /api/v1/authentication/login</code>). A success does not create a session; it returns a challenge (a <code>challengeToken</code> string plus <code>sentTo</code>, the masked email an OTP was mailed to). The component keeps the challenge token in a private field and switches to the OTP step, rendered by the shared <code>OtpComponent</code>.</p>
+</li>
+<li>
+<p>The submitted code goes to <code>AuthService.verifyTwoFactor</code> (<code>POST /api/v1/authentication/2fa</code>) together with the challenge token. On success the BFF sets both session cookies and the service adopts the returned <code>expiresAt</code> into the signal. The component then navigates to <code>/summary</code>, or to a <code>returnUrl</code> query parameter. The <code>returnUrl</code> is honored only if it starts with <code>/api/v1/oauth2/</code> (<code>allowedReturnUrl</code>), which is the open banking consent hand-off; any other value is ignored to prevent open redirects.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_silent_restore_at_boot">Silent restore at boot</h4>
+<div class="paragraph">
+<p>Because the session lives in cookies, a page reload does not lose it, but the in-memory signal starts empty. <code>app.config.ts</code> registers a <code>provideAppInitializer</code> (code Angular runs before the first screen renders) that calls <code>auth.refresh()</code> once and swallows any failure with <code>.catch(() &#8658; undefined)</code>. If the refresh cookie is still valid, the BFF rotates it, sets fresh cookies, and the signal is populated, so the user stays logged in across reloads. If not, the app simply boots unauthenticated and the route guard sends the user to <code>/login</code>.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_refresh_and_why_it_is_deduplicated">Refresh, and why it is deduplicated</h4>
+<div class="paragraph">
+<p><code>AuthService.refresh()</code> calls <code>POST /api/v1/authentication/refresh</code>; the browser supplies the refresh cookie. The service keeps a single in-flight observable guarded by <code>shareReplay(1)</code>, an RxJS operator that lets many subscribers share one HTTP call and its result. If several requests fail with 401 at the same moment, they all wait on the same refresh instead of racing the BFF with parallel rotations. The BFF has a 30-second grace window for honest races (see <code>docs/consumer/security/tokens.adoc</code>), but the client avoids creating them in the first place. <code>finalize</code> clears the slot when the call settles so the next refresh starts fresh.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_the_401_path_in_the_error_interceptor">The 401 path in the error interceptor</h4>
+<div class="paragraph">
+<p><code>errorInterceptor</code> wraps every HTTP call. Its handling, in order:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Failure</th>
+<th class="tableblock halign-left valign-top">Client behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Any error on the audit endpoint or on the refresh endpoint itself</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Passed through untouched, so audit retries and refresh failures are handled by their callers, not recursively</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">403 with code <code>error.msg.consumer.auth.device.fingerprint.forbidden</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Device mismatch: clear the session signal and redirect to <code>/login</code> (see Device Fingerprint)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">401 with no BFF error code</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Treated as an expired access token: call <code>auth.refresh()</code>, then retry the original request once. If the retry fails 401 or 403, clear the session and redirect to <code>/login</code>; a 429 on retry shows the rate-limited toast</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">401 carrying a BFF error code</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Not a session problem (for example an invalid step-up token); shown as a translated toast like any other error</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>The distinction in the last two rows matters: the BFF&#8217;s business denials arrive as 401 plus a machine-readable code, while a dead access token arrives as a bare 401. Only the latter should trigger a refresh.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_logout">Logout</h4>
+<div class="paragraph">
+<p><code>AuthService.logout()</code> calls <code>POST /api/v1/authentication/logout</code>, then clears the local signal. On that call the BFF denylists the access token, revokes the refresh token, and expires both cookies. The layout shell also records a <code>LOGOUT</code> audit event before calling it.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_what_the_route_guard_checks">What the route guard checks</h4>
+<div class="paragraph">
+<p><code>authGuard</code> is one line of policy: it returns <code>true</code> when <code>isAuthenticated()</code> is set, and a redirect to <code>/login</code> otherwise. It reads only the in-memory signal; it makes no network call and proves nothing. Its job is user experience (do not render account screens that would immediately 401), not security. A user who tampers with client state past the guard still holds no valid cookie, and every BFF endpoint rejects them.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="device-fingerprint">Device Fingerprint</h3>
+<div class="paragraph">
+<p>Despite the name, the device fingerprint is not a fingerprint of anything. It is a random UUID (universally unique identifier, a 36-character random string) that the client mints once and presents on every request. The BFF binds it into refresh tokens and JWT claims so that a session stolen from one browser cannot be replayed from another. The server half (validation, the three binding points, and the per-request filter) is described in <code>docs/consumer/security/tokens.adoc</code>.</p>
+</div>
+<div class="sect3">
+<h4 id="_how_the_identifier_is_minted_and_stored">How the identifier is minted and stored</h4>
+<div class="paragraph">
+<p><code>frontend/src/app/core/auth/device-fingerprint.ts</code> exposes one function, <code>deviceFingerprint()</code>:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>If a module-level variable already holds a value, return it (so the ID is read from storage at most once per page load).</p>
+</li>
+<li>
+<p>Otherwise read localStorage key <code>bff.device-id</code>. If absent, generate <code>crypto.randomUUID()</code> and store it.</p>
+</li>
+<li>
+<p>If localStorage throws (some private-browsing modes and embedded webviews block it), fall back to a fresh in-memory UUID that lives only until the tab closes.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>The value is deliberately not derived from browser characteristics (screen size, fonts, canvas rendering and similar). A characteristics fingerprint would be a tracking mechanism and would still be forgeable; a random UUID is honest about what it is: a stable label for one browser profile.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_how_it_reaches_the_bff">How it reaches the BFF</h4>
+<div class="paragraph">
+<p>Two paths carry the same value:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>authInterceptor</code> (<code>core/interceptors/auth.interceptor.ts</code>) clones each request whose URL starts with <code>/api</code> and sets the <code>X-Device-Fingerprint</code> header. An interceptor is a hook that runs on every outgoing HTTP request. The BFF&#8217;s <code>DeviceFingerprintFilter</code> requires this header on every authenticated request and compares it to the claim inside the access-token cookie.</p>
+</li>
+<li>
+<p>The generated API client (<code>@bff/client</code>) declares the fingerprint as a required, typed first parameter on the sensitive methods: login, 2FA, refresh, and every step-up initiate/confirm. Feature code passes <code>deviceFingerprint()</code> explicitly there (see <code>AuthService</code>, <code>TransfersStore</code>, <code>BeneficiariesStore</code>, <code>SettingsStore</code>). The interceptor would have set the header anyway; the typed parameter exists so the contract is visible in the method signature and cannot be forgotten if the interceptor changes.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The audit batcher (<code>core/audit/audit.service.ts</code>) uses <code>fetch</code> directly rather than Angular&#8217;s HTTP client, so it bypasses the interceptor and sets the header itself.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_what_the_binding_buys">What the binding buys</h4>
+<div class="paragraph">
+<p>The BFF stamps the fingerprint into each refresh-token row and into the <code>device_fingerprint</code> claim of access, challenge, and step-up tokens. Because the cookies are httpOnly, an attacker who steals them (for example by copying them off a device backup or through a proxy) must replay them from a browser that also presents the matching header. Without the localStorage value, refresh with the current token fails with a device mismatch. The BFF revokes the whole session family only when an already-rotated token is replayed; on such a replay, a device mismatch triggers the revocation even inside the rotation grace window.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_client_handling_of_a_mismatch">Client handling of a mismatch</h4>
+<div class="paragraph">
+<p>If the BFF rejects a request with HTTP 403 and code <code>error.msg.consumer.auth.device.fingerprint.forbidden</code>, <code>errorInterceptor</code> treats the session as unusable on this device: it records an <code>API_FAILURE</code> audit event, clears the session signal, and redirects to <code>/login</code>. There is no retry: a mismatch cannot be fixed by refreshing, only by logging in again from this device.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_what_this_does_and_does_not_defend_against">What this does and does not defend against</h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Question</th>
+<th class="tableblock halign-left valign-top">Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Stops a stolen cookie replayed from another device?</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes. The thief&#8217;s browser lacks the matching <code>bff.device-id</code>, so both ordinary requests and refresh attempts fail.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Stops an attacker who controls the victim&#8217;s browser?</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No. Script running in the victim&#8217;s page (or anyone who can read its localStorage) sees the UUID; it is an identifier, not a secret.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Identifies a physical device?</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No. It labels one browser profile. Clearing site data, switching browsers, or private-browsing mode mints a new identity, after which the user must log in again. By design, this costs a login, never data.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enables cross-site tracking?</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No. It is only ever sent to the BFF, and only on <code>/api</code> requests.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="step-up">Step-Up Challenges</h3>
+<div class="paragraph">
+<p>Sensitive actions require the user to re-prove control of their second factor immediately before the action executes, even with a valid session. The client&#8217;s job is small. It calls the initiate endpoint, shows the OTP entry screen, and echoes the challenge back at confirm time. Everything that makes the mechanism safe (the token&#8217;s binding to user, device, and exact action parameters, and the OTP hashing and attempt limits) happens on the BFF and is described in <code>docs/consumer/security/step-up.adoc</code>.</p>
+</div>
+<div class="sect3">
+<h4 id="_the_client_side_shape_of_every_flow">The client-side shape of every flow</h4>
+<div class="paragraph">
+<p>Each screen follows the same three states, tracked in a <code>step</code> signal:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Form.</strong> The user fills in the action (amount, payee, new password). Submitting calls the feature&#8217;s initiate endpoint through its store. The response is a challenge object: an opaque <code>stepUpToken</code> (opaque meaning the client never parses or inspects it; it is carried, not read), an <code>expiresAt</code>, and <code>sentTo</code>, the masked email the OTP went to.</p>
+</li>
+<li>
+<p><strong>OTP.</strong> The store puts the challenge in a signal and the component switches to the shared <code>OtpComponent</code> (<code>shared/otp/otp.component.ts</code>), which shows the masked destination and collects a six-character code. Cancelling returns to the form; the abandoned challenge simply expires server side.</p>
+</li>
+<li>
+<p><strong>Confirm.</strong> The component sends the confirm request containing the <code>stepUpToken</code> from the store signal, the entered OTP, and the full action parameters again. The BFF recomputes a hash of those parameters and rejects the confirm if anything changed since initiate. On success the store clears the challenge signal (<code>challenge.set(null)</code>) and the screen shows its done state.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>The challenge lives only in that store signal, in memory: it is never written to localStorage or a cookie. Because the stores are root-scoped services, the signal survives in-app navigation; it is cleared on a successful confirm and lost on a full page reload. The token is short-lived (5 minutes) and useless as a session credential: the BFF&#8217;s access-token decoder rejects it outright because it carries a <code>purpose</code> claim.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_screens_that_use_the_pattern">Screens that use the pattern</h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col>
+<col>
+<col>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Screen</th>
+<th class="tableblock halign-left valign-top">Store / component</th>
+<th class="tableblock halign-left valign-top">BFF endpoints (initiate → confirm)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Transfer (<code>features/transfers/transfer-form.component.ts</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>TransfersStore</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>POST /api/v1/transfers/initiate</code> → <code>POST /api/v1/transfers/confirm</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Loan repayment (<code>features/loans/loan-repay.component.ts</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>TransfersStore</code> (reused; a repayment is a transfer with <code>toAccountType</code> = <code>LOAN</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Same transfer endpoints as above</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Beneficiary add (<code>features/beneficiaries/beneficiaries.component.ts</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>BeneficiariesStore</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>POST /api/v1/beneficiaries/initiate</code> → <code>POST /api/v1/beneficiaries/confirm</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Beneficiary update (same component)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>BeneficiariesStore</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>PUT /api/v1/beneficiaries/{publicId}/initiate</code> → <code>PUT /api/v1/beneficiaries/{publicId}/confirm</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Password change (<code>features/settings/change-password.component.ts</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>SettingsStore</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>POST /api/v1/user/password/change/initiate</code> → <code>POST /api/v1/user/password/change/confirm</code></p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>Every initiate and confirm also passes the device fingerprint as a typed parameter (see Device Fingerprint); the BFF requires the confirm to come from the same device as the initiate.</p>
+</div>
+<div class="paragraph">
+<p>There is no client-side registry of "actions that need step-up". A screen participates because its BFF endpoints demand it; the client cannot opt an action out.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_idempotency_on_money_movement">Idempotency on money movement</h4>
+<div class="paragraph">
+<p>The two transfer-backed confirms (transfer, loan repayment) additionally send an <code>Idempotency-Key</code> header: a client-chosen UUID that lets the BFF recognize a retried confirm and execute the transfer only once. The component mints the key lazily with <code>crypto.randomUUID()</code> and reuses it if the same confirm is retried after a network failure. It resets the key whenever the form values change (a changed form is a new action, not a retry) and clears it on success. Beneficiary and password-change confirms carry no idempotency key; they are naturally safe to retry.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_denials">Denials</h4>
+<div class="paragraph">
+<p>A rejected confirm (wrong OTP, expired challenge, or tampered parameters) comes back as HTTP 401 with a feature-specific error code. Because the response carries a code, <code>errorInterceptor</code> does not mistake it for an expired session: no refresh is attempted, the session stays intact, and the user sees a translated toast. The component stays on the OTP step so the user can retry the code. Once the OTP&#8217;s attempt limit or either expiry is hit, the confirm keeps failing; the user then backs out to the form and initiates again, which mints a fresh challenge.</p>
+</div>
+<div class="paragraph">
+<p>The login screen (<code>features/auth/login.component.ts</code>) reuses <code>OtpComponent</code> for its 2FA step but is not step-up: it elevates nothing, it creates the session in the first place, and its challenge token is held in a private component field rather than a store. See Session Model.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_pii_and_secrets_on_the_client">PII and Secrets on the Client</h3>
+<div class="paragraph">
+<p>The client&#8217;s data-hygiene rule is simple: nothing secret and nothing personally identifying (PII: data that identifies a person, such as an email address or a government ID number) may persist in the browser or leave it through a side channel. This section covers what browser storage actually contains, how sensitive inputs are rendered, how the audit pipeline scrubs events before they leave the page, and how errors are displayed. The server half (encryption at rest, masked responses, and the BFF&#8217;s own PII screen) is described in <code>docs/consumer/security/secrets.adoc</code> and, for the audit gate, <code>docs/consumer/features/audit.adoc</code>.</p>
+</div>
+<div class="sect3">
+<h4 id="_what_lives_in_browser_storage">What lives in browser storage</h4>
+<div class="paragraph">
+<p>Grepping the application source for <code>localStorage</code> yields exactly two keys, and sessionStorage is not used at all:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col>
+<col>
+<col>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Key</th>
+<th class="tableblock halign-left valign-top">Written by</th>
+<th class="tableblock halign-left valign-top">Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>bff.device-id</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>core/auth/device-fingerprint.ts</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The random device UUID, an identifier rather than a secret (see Device Fingerprint)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>app.lang</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>core/i18n/i18n.service.ts</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The chosen language code (for example <code>en</code>)</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>No token, credential, account number, or user attribute is ever written to storage. The access and refresh tokens are httpOnly cookies (cookies page JavaScript cannot read) managed entirely by the BFF; the session signal holds only an expiry timestamp; step-up challenges live in in-memory signals that vanish on reload (see Session Model and Step-Up Challenges).</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_sensitive_inputs">Sensitive inputs</h4>
+<div class="paragraph">
+<p>Fields whose value is a secret are rendered as <code>type="password"</code> so the value is masked on screen, kept out of shoulder-surfing range, and excluded from ordinary browser autofill history. These fields are the login and registration passwords, both password-change fields, the password-reset field, and, notably, the registration <code>documentKey</code>, which is the raw SSN or Aadhaar number (<code>features/registration/registration.component.ts</code>, with <code>autocomplete="off"</code>). After submission the BFF returns only <code>maskedLastFour</code>; the full number never comes back to the client. The OTP field (<code>shared/otp/otp.component.ts</code>) is visible while typed, since codes are short-lived and single-use, but it uses <code>autocomplete="one-time-code"</code> and is never stored or logged.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_audit_events_are_scrubbed_before_they_leave_the_browser">Audit events are scrubbed before they leave the browser</h4>
+<div class="paragraph">
+<p>The client audit pipeline (<code>core/audit/audit.service.ts</code>) batches navigation, sensitive-action, and error events to <code>POST /api/v1/audit/events</code>. Every <code>details</code> map passes through <code>buildDetails</code> in <code>core/audit/pii-scrub.ts</code> before it is buffered:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Blocked keys.</strong> Entries whose key is <code>password</code>, <code>otp</code>, <code>ssn</code>, or <code>token</code> (case-insensitive) are dropped entirely, whatever their value.</p>
+</li>
+<li>
+<p><strong>Pattern redaction.</strong> <code>scrubPii</code> replaces anything shaped like an email address, a 9-digit run (SSN-like), a 12-digit run (Aadhaar-like), or a 13-to-19-digit run (card-number-like) with <code>[REDACTED]</code>.</p>
+</li>
+<li>
+<p><strong>Length cap.</strong> Each value is truncated to 300 characters, bounding how much of any unexpected payload can ride along.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The two automatic producers stay coarse by construction. <code>errorInterceptor</code> records failed calls as an endpoint template with numeric and UUID path segments replaced by <code>:id</code> (never query strings or bodies). <code>AuditErrorHandler</code> (<code>core/audit/audit-error-handler.ts</code>) records only an exception&#8217;s message and top stack frame, both passed through <code>buildDetails</code>.</p>
+</div>
+<div class="paragraph">
+<p>The client scrub is a courtesy, not the gate. The BFF re-screens every submitted event server side (<code>AuditPiiScreen</code>) against the same email, SSN-like, Aadhaar-like, and card-like patterns and the same forbidden keys, and drops any event that matches. A tampered client therefore cannot smuggle PII into the audit table. See <code>docs/consumer/features/audit.adoc</code>.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_errors_never_display_raw_payloads">Errors never display raw payloads</h4>
+<div class="paragraph">
+<p><code>errorInterceptor</code> turns every failure into a toast whose text is resolved in strict order. It first tries the BFF&#8217;s machine-readable <code>code</code> translated through the i18n catalog, then the BFF&#8217;s <code>defaultMessage</code> (a safe, human-written sentence composed server side), then a generic translated fallback. Raw response bodies, stack traces, and HTTP status pages are never rendered, so an upstream error cannot leak internals or reflected input into the UI.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_test_coverage">Test coverage</h4>
+<div class="paragraph">
+<p>The Playwright end-to-end spec <code>frontend/playwright/tests/registration.spec.ts</code> walks the full registration flow with a known OTP code and a known document key. It then dumps both <code>localStorage</code> and <code>sessionStorage</code> and asserts that neither value appears anywhere in them. This is a regression trap on the "secrets never persist" rule at the point where the client handles its most sensitive input.</p>
+</div>
+</div>
+</div>
+</div>

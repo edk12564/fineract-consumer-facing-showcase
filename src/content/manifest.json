@@ -1,0 +1,2091 @@
+{
+  "generatedFrom": "fineract-consumer-facing",
+  "sources": [
+    {
+      "id": "backend",
+      "title": "Consumer BFF (Backend)",
+      "docTitle": "Fineract Consumer BFF",
+      "sections": [
+        {
+          "slug": "architecture",
+          "title": "Architecture",
+          "file": "backend-architecture.html",
+          "words": 9676,
+          "headings": [
+            {
+              "id": "_architecture_overview",
+              "text": "Architecture Overview",
+              "level": 3
+            },
+            {
+              "id": "_what_this_project_is",
+              "text": "What this project is",
+              "level": 4
+            },
+            {
+              "id": "_why_the_bff_exists",
+              "text": "Why the BFF exists",
+              "level": 4
+            },
+            {
+              "id": "_repository_layout",
+              "text": "Repository layout",
+              "level": 4
+            },
+            {
+              "id": "_runtime_topology",
+              "text": "Runtime topology",
+              "level": 4
+            },
+            {
+              "id": "_request_path",
+              "text": "Request path",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "_module_structure",
+              "text": "Module Structure",
+              "level": 3
+            },
+            {
+              "id": "_spring_modulith",
+              "text": "Spring Modulith",
+              "level": 4
+            },
+            {
+              "id": "_module_list",
+              "text": "Module list",
+              "level": 4
+            },
+            {
+              "id": "_cqrs_package_layout",
+              "text": "CQRS package layout",
+              "level": 4
+            },
+            {
+              "id": "_request_flow_through_a_module",
+              "text": "Request flow through a module",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_2",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_the_infrastructure_module",
+              "text": "The Infrastructure Module",
+              "level": 3
+            },
+            {
+              "id": "_the_dependency_rule",
+              "text": "The dependency rule",
+              "level": 4
+            },
+            {
+              "id": "_access",
+              "text": "access",
+              "level": 4
+            },
+            {
+              "id": "_audit",
+              "text": "audit",
+              "level": 4
+            },
+            {
+              "id": "_configs",
+              "text": "configs",
+              "level": 4
+            },
+            {
+              "id": "_exception",
+              "text": "exception",
+              "level": 4
+            },
+            {
+              "id": "_fineractclient",
+              "text": "fineractclient",
+              "level": 4
+            },
+            {
+              "id": "_idempotency",
+              "text": "idempotency",
+              "level": 4
+            },
+            {
+              "id": "_jwt",
+              "text": "jwt",
+              "level": 4
+            },
+            {
+              "id": "_kyc",
+              "text": "kyc",
+              "level": 4
+            },
+            {
+              "id": "_oauth2",
+              "text": "oauth2",
+              "level": 4
+            },
+            {
+              "id": "_otp",
+              "text": "otp",
+              "level": 4
+            },
+            {
+              "id": "_stepup",
+              "text": "stepup",
+              "level": 4
+            },
+            {
+              "id": "_web",
+              "text": "web",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_3",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_2",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "_persistence",
+              "text": "Persistence",
+              "level": 3
+            },
+            {
+              "id": "_two_systems_of_record",
+              "text": "Two systems of record",
+              "level": 4
+            },
+            {
+              "id": "_bff_owned_tables",
+              "text": "BFF-owned tables",
+              "level": 4
+            },
+            {
+              "id": "_liquibase",
+              "text": "Liquibase",
+              "level": 4
+            },
+            {
+              "id": "_identifier_conventions",
+              "text": "Identifier conventions",
+              "level": 4
+            },
+            {
+              "id": "_secrets_at_rest",
+              "text": "Secrets at rest",
+              "level": 4
+            },
+            {
+              "id": "_caching_layer_valkey",
+              "text": "Caching layer: Valkey",
+              "level": 4
+            },
+            {
+              "id": "_repositories_own_queries",
+              "text": "Repositories own queries",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_4",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_3",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "idempotency",
+              "text": "Idempotency",
+              "level": 3
+            },
+            {
+              "id": "_which_endpoints_require_a_key",
+              "text": "Which endpoints require a key",
+              "level": 4
+            },
+            {
+              "id": "_the_header_and_its_format",
+              "text": "The header and its format",
+              "level": 4
+            },
+            {
+              "id": "_key_derivation_and_per_user_scoping",
+              "text": "Key derivation and per-user scoping",
+              "level": 4
+            },
+            {
+              "id": "_how_the_key_reaches_fineract",
+              "text": "How the key reaches Fineract",
+              "level": 4
+            },
+            {
+              "id": "_storage_replay_ttl",
+              "text": "Storage, replay, TTL",
+              "level": 4
+            },
+            {
+              "id": "_test_coverage",
+              "text": "Test coverage",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_5",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_4",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "fineract-integration",
+              "text": "Fineract Core Integration",
+              "level": 3
+            },
+            {
+              "id": "_overview",
+              "text": "Overview",
+              "level": 4
+            },
+            {
+              "id": "_the_generated_feign_client",
+              "text": "The generated Feign client",
+              "level": 4
+            },
+            {
+              "id": "_narrow_interfaces_at_the_seam",
+              "text": "Narrow interfaces at the seam",
+              "level": 4
+            },
+            {
+              "id": "_authentication_and_tenant_handling",
+              "text": "Authentication and tenant handling",
+              "level": 4
+            },
+            {
+              "id": "_request_body_encoding_non_empty",
+              "text": "Request body encoding: NON_EMPTY",
+              "level": 4
+            },
+            {
+              "id": "_idempotency_keys",
+              "text": "Idempotency keys",
+              "level": 4
+            },
+            {
+              "id": "_error_handling",
+              "text": "Error handling",
+              "level": 4
+            },
+            {
+              "id": "_dto_translation_policy",
+              "text": "DTO translation policy",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_6",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_5",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "_technology_stack",
+              "text": "Technology Stack",
+              "level": 3
+            },
+            {
+              "id": "_language_and_build",
+              "text": "Language and build",
+              "level": 4
+            },
+            {
+              "id": "_backend_dependencies",
+              "text": "Backend dependencies",
+              "level": 4
+            },
+            {
+              "id": "_openapi_client_generation_pipeline",
+              "text": "OpenAPI client generation pipeline",
+              "level": 4
+            },
+            {
+              "id": "_frontend",
+              "text": "Frontend",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_7",
+              "text": "Design rationale",
+              "level": 4
+            }
+          ]
+        },
+        {
+          "slug": "security",
+          "title": "Security",
+          "file": "backend-security.html",
+          "words": 6020,
+          "headings": [
+            {
+              "id": "tokens",
+              "text": "Token Model",
+              "level": 3
+            },
+            {
+              "id": "_token_types_and_lifetimes",
+              "text": "Token types and lifetimes",
+              "level": 4
+            },
+            {
+              "id": "_login_pipeline",
+              "text": "Login pipeline",
+              "level": 4
+            },
+            {
+              "id": "_access_token_delivery_httponly_cookie",
+              "text": "Access token delivery: httpOnly cookie",
+              "level": 4
+            },
+            {
+              "id": "_refresh_tokens_storage_rotation_revocation",
+              "text": "Refresh tokens: storage, rotation, revocation",
+              "level": 4
+            },
+            {
+              "id": "_device_fingerprint_binding",
+              "text": "Device fingerprint binding",
+              "level": 4
+            },
+            {
+              "id": "_jwt_claims",
+              "text": "JWT claims",
+              "level": 4
+            },
+            {
+              "id": "_signing_key_management",
+              "text": "Signing key management",
+              "level": 4
+            },
+            {
+              "id": "_request_time_validation",
+              "text": "Request-time validation",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_8",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_6",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "step-up",
+              "text": "Step-Up Authentication",
+              "level": 3
+            },
+            {
+              "id": "_actions_that_require_step_up",
+              "text": "Actions that require step-up",
+              "level": 4
+            },
+            {
+              "id": "_issuing_a_challenge",
+              "text": "Issuing a challenge",
+              "level": 4
+            },
+            {
+              "id": "_how_the_elevated_state_is_represented",
+              "text": "How the elevated state is represented",
+              "level": 4
+            },
+            {
+              "id": "_verifying_at_confirm_time",
+              "text": "Verifying at confirm time",
+              "level": 4
+            },
+            {
+              "id": "_denial_behavior",
+              "text": "Denial behavior",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_9",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_7",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "abac",
+              "text": "Attribute-Based Access Control (ABAC)",
+              "level": 3
+            },
+            {
+              "id": "_deny_by_default",
+              "text": "Deny by default",
+              "level": 4
+            },
+            {
+              "id": "_policies_as_data_the_accesspolicyevaluator",
+              "text": "Policies as data: the AccessPolicyEvaluator",
+              "level": 4
+            },
+            {
+              "id": "_attribute_categories",
+              "text": "Attribute categories",
+              "level": 4
+            },
+            {
+              "id": "_example_a_feature_service_invoking_the_evaluator",
+              "text": "Example: a feature service invoking the evaluator",
+              "level": 4
+            },
+            {
+              "id": "_resource_ownership_checks",
+              "text": "Resource ownership checks",
+              "level": 4
+            },
+            {
+              "id": "_why_the_bff_does_not_rely_on_fineracts_authorization_alone",
+              "text": "Why the BFF does not rely on Fineract’s authorization alone",
+              "level": 4
+            },
+            {
+              "id": "_rate_limiting_as_an_environment_control",
+              "text": "Rate limiting as an environment control",
+              "level": 4
+            },
+            {
+              "id": "_device_fingerprint_as_an_environment_control",
+              "text": "Device fingerprint as an environment control",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_10",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_8",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "_secrets_and_personal_data_handling",
+              "text": "Secrets and Personal Data Handling",
+              "level": 3
+            },
+            {
+              "id": "_government_id_numbers_ssn_aadhaar",
+              "text": "Government ID numbers (SSN, Aadhaar)",
+              "level": 4
+            },
+            {
+              "id": "_one_time_passwords_otp",
+              "text": "One-time passwords (OTP)",
+              "level": 4
+            },
+            {
+              "id": "_pii_screening_in_the_audit_pipeline",
+              "text": "PII screening in the audit pipeline",
+              "level": 4
+            },
+            {
+              "id": "_audit_log_versus_application_log",
+              "text": "Audit log versus application log",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_11",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_9",
+              "text": "Limitations and future work",
+              "level": 4
+            }
+          ]
+        },
+        {
+          "slug": "features",
+          "title": "Features",
+          "file": "backend-features.html",
+          "words": 22833,
+          "headings": [
+            {
+              "id": "_registration",
+              "text": "Registration",
+              "level": 3
+            },
+            {
+              "id": "_purpose",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_module_layout",
+              "text": "Module layout",
+              "level": 4
+            },
+            {
+              "id": "_flow_step_by_step",
+              "text": "Flow step by step",
+              "level": 4
+            },
+            {
+              "id": "_endpoints",
+              "text": "Endpoints",
+              "level": 4
+            },
+            {
+              "id": "_collaborating_modules_and_fineract_calls",
+              "text": "Collaborating modules and Fineract calls",
+              "level": 4
+            },
+            {
+              "id": "_data_model",
+              "text": "Data model",
+              "level": 4
+            },
+            {
+              "id": "_failure_and_abuse_handling",
+              "text": "Failure and abuse handling",
+              "level": 4
+            },
+            {
+              "id": "_testing",
+              "text": "Testing",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_12",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_10",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "_authentication",
+              "text": "Authentication",
+              "level": 3
+            },
+            {
+              "id": "_purpose_2",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_module_layout_2",
+              "text": "Module layout",
+              "level": 4
+            },
+            {
+              "id": "_login_flow",
+              "text": "Login flow",
+              "level": 4
+            },
+            {
+              "id": "_refresh_flow",
+              "text": "Refresh flow",
+              "level": 4
+            },
+            {
+              "id": "_logout_and_session_revocation",
+              "text": "Logout and session revocation",
+              "level": 4
+            },
+            {
+              "id": "_kyc_live_check_at_every_mint",
+              "text": "KYC live check at every mint",
+              "level": 4
+            },
+            {
+              "id": "_required_headers",
+              "text": "Required headers",
+              "level": 4
+            },
+            {
+              "id": "_endpoints_2",
+              "text": "Endpoints",
+              "level": 4
+            },
+            {
+              "id": "_data_model_2",
+              "text": "Data model",
+              "level": 4
+            },
+            {
+              "id": "_lockout_and_abuse_handling",
+              "text": "Lockout and abuse handling",
+              "level": 4
+            },
+            {
+              "id": "_testing_2",
+              "text": "Testing",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_13",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_11",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "_one_time_passwords",
+              "text": "One-Time Passwords",
+              "level": 3
+            },
+            {
+              "id": "_purpose_3",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_code_layout",
+              "text": "Code layout",
+              "level": 4
+            },
+            {
+              "id": "_generation_hashing_and_storage",
+              "text": "Generation, hashing, and storage",
+              "level": 4
+            },
+            {
+              "id": "_verification_ttl_and_attempt_limits",
+              "text": "Verification, TTL, and attempt limits",
+              "level": 4
+            },
+            {
+              "id": "_delivery_channels",
+              "text": "Delivery channels",
+              "level": 4
+            },
+            {
+              "id": "_otp_values_are_never_logged",
+              "text": "OTP values are never logged",
+              "level": 4
+            },
+            {
+              "id": "_boundaries_and_consumers",
+              "text": "Boundaries and consumers",
+              "level": 4
+            },
+            {
+              "id": "_data_model_3",
+              "text": "Data model",
+              "level": 4
+            },
+            {
+              "id": "_testing_3",
+              "text": "Testing",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_14",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_12",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "_identity_verification",
+              "text": "Identity Verification",
+              "level": 3
+            },
+            {
+              "id": "_purpose_4",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_division_of_responsibility",
+              "text": "Division of responsibility",
+              "level": 4
+            },
+            {
+              "id": "_matching_logic",
+              "text": "Matching logic",
+              "level": 4
+            },
+            {
+              "id": "_pluggable_id_types",
+              "text": "Pluggable ID types",
+              "level": 4
+            },
+            {
+              "id": "_security_handling",
+              "text": "Security handling",
+              "level": 4
+            },
+            {
+              "id": "_result_flow_and_audit_trail",
+              "text": "Result flow and audit trail",
+              "level": 4
+            },
+            {
+              "id": "_downstream_consumption_of_kyc_verified",
+              "text": "Downstream consumption of kyc_verified",
+              "level": 4
+            },
+            {
+              "id": "_endpoints_3",
+              "text": "Endpoints",
+              "level": 4
+            },
+            {
+              "id": "_data_model_4",
+              "text": "Data model",
+              "level": 4
+            },
+            {
+              "id": "_testing_coverage",
+              "text": "Testing coverage",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_15",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_13",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "_savings",
+              "text": "Savings",
+              "level": 3
+            },
+            {
+              "id": "_purpose_5",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_endpoints_4",
+              "text": "Endpoints",
+              "level": 4
+            },
+            {
+              "id": "_ownership_and_abac_checks",
+              "text": "Ownership and ABAC checks",
+              "level": 4
+            },
+            {
+              "id": "_fineract_integration",
+              "text": "Fineract integration",
+              "level": 4
+            },
+            {
+              "id": "_dto_mapping_policy",
+              "text": "DTO mapping policy",
+              "level": 4
+            },
+            {
+              "id": "_bff_state",
+              "text": "BFF state",
+              "level": 4
+            },
+            {
+              "id": "_testing_4",
+              "text": "Testing",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_16",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_14",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "_loans",
+              "text": "Loans",
+              "level": 3
+            },
+            {
+              "id": "_query_endpoints",
+              "text": "Query endpoints",
+              "level": 4
+            },
+            {
+              "id": "_command_endpoints",
+              "text": "Command endpoints",
+              "level": 4
+            },
+            {
+              "id": "_loan_application_lifecycle",
+              "text": "Loan application lifecycle",
+              "level": 4
+            },
+            {
+              "id": "_access_control_and_idempotency",
+              "text": "Access control and idempotency",
+              "level": 4
+            },
+            {
+              "id": "_fineract_integration_2",
+              "text": "Fineract integration",
+              "level": 4
+            },
+            {
+              "id": "_data_model_5",
+              "text": "Data model",
+              "level": 4
+            },
+            {
+              "id": "_testing_coverage_2",
+              "text": "Testing coverage",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_17",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_15",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "transfers",
+              "text": "Transfers",
+              "level": 3
+            },
+            {
+              "id": "_endpoints_5",
+              "text": "Endpoints",
+              "level": 4
+            },
+            {
+              "id": "_transfer_flow",
+              "text": "Transfer flow",
+              "level": 4
+            },
+            {
+              "id": "_transfer_history_flow",
+              "text": "Transfer history flow",
+              "level": 4
+            },
+            {
+              "id": "_security_controls",
+              "text": "Security controls",
+              "level": 4
+            },
+            {
+              "id": "_interaction_with_the_beneficiaries_module",
+              "text": "Interaction with the beneficiaries module",
+              "level": 4
+            },
+            {
+              "id": "_fineract_integration_3",
+              "text": "Fineract integration",
+              "level": 4
+            },
+            {
+              "id": "_money_handling",
+              "text": "Money handling",
+              "level": 4
+            },
+            {
+              "id": "_data_model_6",
+              "text": "Data model",
+              "level": 4
+            },
+            {
+              "id": "_testing_coverage_3",
+              "text": "Testing coverage",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_18",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_16",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "_beneficiaries",
+              "text": "Beneficiaries",
+              "level": 3
+            },
+            {
+              "id": "_endpoints_6",
+              "text": "Endpoints",
+              "level": 4
+            },
+            {
+              "id": "_lifecycle",
+              "text": "Lifecycle",
+              "level": 4
+            },
+            {
+              "id": "_abac",
+              "text": "ABAC",
+              "level": 4
+            },
+            {
+              "id": "_storage_and_fineract_interaction",
+              "text": "Storage and Fineract interaction",
+              "level": 4
+            },
+            {
+              "id": "_interaction_with_transfers",
+              "text": "Interaction with transfers",
+              "level": 4
+            },
+            {
+              "id": "_data_model_7",
+              "text": "Data model",
+              "level": 4
+            },
+            {
+              "id": "_testing_coverage_4",
+              "text": "Testing coverage",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_19",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_17",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "_account_summary",
+              "text": "Account Summary",
+              "level": 3
+            },
+            {
+              "id": "_endpoints_7",
+              "text": "Endpoints",
+              "level": 4
+            },
+            {
+              "id": "_how_aggregation_works",
+              "text": "How aggregation works",
+              "level": 4
+            },
+            {
+              "id": "_caching",
+              "text": "Caching",
+              "level": 4
+            },
+            {
+              "id": "_abac_2",
+              "text": "ABAC",
+              "level": 4
+            },
+            {
+              "id": "_testing_coverage_5",
+              "text": "Testing coverage",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_20",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_18",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "_user_profile",
+              "text": "User Profile",
+              "level": 3
+            },
+            {
+              "id": "_query_endpoints_2",
+              "text": "Query endpoints",
+              "level": 4
+            },
+            {
+              "id": "_command_endpoints_2",
+              "text": "Command endpoints",
+              "level": 4
+            },
+            {
+              "id": "_internal_service_surface",
+              "text": "Internal service surface",
+              "level": 4
+            },
+            {
+              "id": "_profile_picture_handling",
+              "text": "Profile picture handling",
+              "level": 4
+            },
+            {
+              "id": "_data_sources_fineract_versus_bff_local",
+              "text": "Data sources: Fineract versus BFF-local",
+              "level": 4
+            },
+            {
+              "id": "_security_2",
+              "text": "Security",
+              "level": 4
+            },
+            {
+              "id": "_data_model_8",
+              "text": "Data model",
+              "level": 4
+            },
+            {
+              "id": "_testing_coverage_6",
+              "text": "Testing coverage",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_21",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_19",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "_audit_2",
+              "text": "Audit",
+              "level": 3
+            },
+            {
+              "id": "_frontend_event_ingestion_consumer_audit_command_side",
+              "text": "Frontend event ingestion (consumer.audit, command side)",
+              "level": 4
+            },
+            {
+              "id": "_server_side_audit_sink_infrastructure_audit",
+              "text": "Server-side audit sink (infrastructure.audit)",
+              "level": 4
+            },
+            {
+              "id": "_retention",
+              "text": "Retention",
+              "level": 4
+            },
+            {
+              "id": "_query_surface_consumer_audit_query_side",
+              "text": "Query surface (consumer.audit, query side)",
+              "level": 4
+            },
+            {
+              "id": "_data_model_9",
+              "text": "Data model",
+              "level": 4
+            },
+            {
+              "id": "_testing_5",
+              "text": "Testing",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_22",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_20",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "openbanking",
+              "text": "Open Banking",
+              "level": 3
+            },
+            {
+              "id": "_consent_model",
+              "text": "Consent model",
+              "level": 4
+            },
+            {
+              "id": "_the_oauth2_flow",
+              "text": "The OAuth2 flow",
+              "level": 4
+            },
+            {
+              "id": "_endpoints_8",
+              "text": "Endpoints",
+              "level": 4
+            },
+            {
+              "id": "_abac_scoping",
+              "text": "ABAC scoping",
+              "level": 4
+            },
+            {
+              "id": "_data_model_10",
+              "text": "Data model",
+              "level": 4
+            },
+            {
+              "id": "_auditing",
+              "text": "Auditing",
+              "level": 4
+            },
+            {
+              "id": "_testing_and_demo_tooling",
+              "text": "Testing and demo tooling",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_23",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_21",
+              "text": "Limitations and future work",
+              "level": 4
+            }
+          ]
+        },
+        {
+          "slug": "development",
+          "title": "Development",
+          "file": "backend-development.html",
+          "words": 2406,
+          "headings": [
+            {
+              "id": "_build_and_test",
+              "text": "Build and Test",
+              "level": 3
+            },
+            {
+              "id": "_prerequisites",
+              "text": "Prerequisites",
+              "level": 4
+            },
+            {
+              "id": "_the_local_docker_stack",
+              "text": "The local Docker stack",
+              "level": 4
+            },
+            {
+              "id": "_backend_unit_tests",
+              "text": "Backend unit tests",
+              "level": 4
+            },
+            {
+              "id": "_backend_end_to_end_tests_cucumber",
+              "text": "Backend end-to-end tests (Cucumber)",
+              "level": 4
+            },
+            {
+              "id": "_openapi_pipeline_and_generated_clients",
+              "text": "OpenAPI pipeline and generated clients",
+              "level": 4
+            },
+            {
+              "id": "_frontend_tests",
+              "text": "Frontend tests",
+              "level": 4
+            },
+            {
+              "id": "_continuous_integration",
+              "text": "Continuous integration",
+              "level": 4
+            },
+            {
+              "id": "_where_tests_live",
+              "text": "Where tests live",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_24",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_22",
+              "text": "Limitations and future work",
+              "level": 4
+            },
+            {
+              "id": "_running_the_demo",
+              "text": "Running the Demo",
+              "level": 3
+            },
+            {
+              "id": "_start_the_stack",
+              "text": "Start the stack",
+              "level": 4
+            },
+            {
+              "id": "_seed_demo_data",
+              "text": "Seed demo data",
+              "level": 4
+            },
+            {
+              "id": "_what_the_seeder_creates",
+              "text": "What the seeder creates",
+              "level": 4
+            },
+            {
+              "id": "_demo_credentials",
+              "text": "Demo credentials",
+              "level": 4
+            },
+            {
+              "id": "_tear_down",
+              "text": "Tear down",
+              "level": 4
+            },
+            {
+              "id": "_open_banking_demo_tokens",
+              "text": "Open banking demo tokens",
+              "level": 4
+            },
+            {
+              "id": "_design_rationale_25",
+              "text": "Design rationale",
+              "level": 4
+            },
+            {
+              "id": "_limitations_and_future_work_23",
+              "text": "Limitations and future work",
+              "level": 4
+            }
+          ]
+        },
+        {
+          "slug": "api-reference",
+          "title": "API Reference",
+          "file": "backend-api-reference.html",
+          "words": 1193,
+          "headings": [
+            {
+              "id": "_generating_the_openapi_spec",
+              "text": "Generating the OpenAPI spec",
+              "level": 3
+            },
+            {
+              "id": "_browsing_swagger_ui",
+              "text": "Browsing Swagger UI",
+              "level": 3
+            },
+            {
+              "id": "_generated_clients",
+              "text": "Generated clients",
+              "level": 3
+            },
+            {
+              "id": "_endpoint_index",
+              "text": "Endpoint index",
+              "level": 3
+            },
+            {
+              "id": "_registration_2",
+              "text": "Registration",
+              "level": 4
+            },
+            {
+              "id": "_authentication_2",
+              "text": "Authentication",
+              "level": 4
+            },
+            {
+              "id": "_user",
+              "text": "User",
+              "level": 4
+            },
+            {
+              "id": "_summary",
+              "text": "Summary",
+              "level": 4
+            },
+            {
+              "id": "_savings_2",
+              "text": "Savings",
+              "level": 4
+            },
+            {
+              "id": "_loans_2",
+              "text": "Loans",
+              "level": 4
+            },
+            {
+              "id": "_transfers",
+              "text": "Transfers",
+              "level": 4
+            },
+            {
+              "id": "_beneficiaries_2",
+              "text": "Beneficiaries",
+              "level": 4
+            },
+            {
+              "id": "_audit_3",
+              "text": "Audit",
+              "level": 4
+            },
+            {
+              "id": "_open_banking",
+              "text": "Open banking",
+              "level": 4
+            }
+          ]
+        },
+        {
+          "slug": "appendix-configuration-properties",
+          "title": "Configuration Properties",
+          "file": "backend-appendix-configuration-properties.html",
+          "words": 1342,
+          "headings": [
+            {
+              "id": "_server_properties",
+              "text": "Server Properties",
+              "level": 3
+            },
+            {
+              "id": "_database_properties",
+              "text": "Database Properties",
+              "level": 3
+            },
+            {
+              "id": "_cache_properties",
+              "text": "Cache Properties",
+              "level": 3
+            },
+            {
+              "id": "_fineract_client_properties",
+              "text": "Fineract Client Properties",
+              "level": 3
+            },
+            {
+              "id": "_authentication_properties",
+              "text": "Authentication Properties",
+              "level": 3
+            },
+            {
+              "id": "_otp_and_mail_properties",
+              "text": "OTP and Mail Properties",
+              "level": 3
+            },
+            {
+              "id": "_rate_limit_properties",
+              "text": "Rate Limit Properties",
+              "level": 3
+            },
+            {
+              "id": "properties-audit",
+              "text": "Audit Properties",
+              "level": 3
+            },
+            {
+              "id": "_open_banking_properties",
+              "text": "Open Banking Properties",
+              "level": 3
+            }
+          ]
+        },
+        {
+          "slug": "glossary",
+          "title": "Glossary",
+          "file": "backend-glossary.html",
+          "words": 1242,
+          "headings": []
+        }
+      ]
+    },
+    {
+      "id": "frontend",
+      "title": "Web App (Frontend)",
+      "docTitle": "Fineract Consumer Frontend",
+      "sections": [
+        {
+          "slug": "architecture",
+          "title": "Architecture",
+          "file": "frontend-architecture.html",
+          "words": 3373,
+          "headings": [
+            {
+              "id": "overview",
+              "text": "Architecture Overview",
+              "level": 3
+            },
+            {
+              "id": "_what_the_frontend_is",
+              "text": "What the frontend is",
+              "level": 4
+            },
+            {
+              "id": "_bootstrap_chain",
+              "text": "Bootstrap chain",
+              "level": 4
+            },
+            {
+              "id": "_routes",
+              "text": "Routes",
+              "level": 4
+            },
+            {
+              "id": "_app_shell",
+              "text": "App shell",
+              "level": 4
+            },
+            {
+              "id": "_directory_layout",
+              "text": "Directory layout",
+              "level": 4
+            },
+            {
+              "id": "_the_authguard",
+              "text": "The authGuard",
+              "level": 4
+            },
+            {
+              "id": "state-management",
+              "text": "State Management",
+              "level": 3
+            },
+            {
+              "id": "_the_signal_store_pattern",
+              "text": "The signal-store pattern",
+              "level": 4
+            },
+            {
+              "id": "_worked_example_transfers",
+              "text": "Worked example: transfers",
+              "level": 4
+            },
+            {
+              "id": "_store_inventory",
+              "text": "Store inventory",
+              "level": 4
+            },
+            {
+              "id": "_conventions",
+              "text": "Conventions",
+              "level": 4
+            },
+            {
+              "id": "_the_authservice_exception",
+              "text": "The AuthService exception",
+              "level": 4
+            },
+            {
+              "id": "bff-integration",
+              "text": "BFF Integration",
+              "level": 3
+            },
+            {
+              "id": "_the_generated_client",
+              "text": "The generated client",
+              "level": 4
+            },
+            {
+              "id": "_how_the_client_is_generated",
+              "text": "How the client is generated",
+              "level": 4
+            },
+            {
+              "id": "_dependency_injection_wiring",
+              "text": "Dependency-injection wiring",
+              "level": 4
+            },
+            {
+              "id": "_the_interceptor_chain",
+              "text": "The interceptor chain",
+              "level": 4
+            },
+            {
+              "id": "_base_path_resolution_per_environment",
+              "text": "Base path resolution per environment",
+              "level": 4
+            },
+            {
+              "id": "_technology_stack",
+              "text": "Technology Stack",
+              "level": 3
+            },
+            {
+              "id": "_runtime_and_tooling",
+              "text": "Runtime and tooling",
+              "level": 4
+            },
+            {
+              "id": "_idioms_in_use",
+              "text": "Idioms in use",
+              "level": 4
+            }
+          ]
+        },
+        {
+          "slug": "security",
+          "title": "Security",
+          "file": "frontend-security.html",
+          "words": 2841,
+          "headings": [
+            {
+              "id": "session",
+              "text": "Session Model",
+              "level": 3
+            },
+            {
+              "id": "_what_the_client_actually_holds",
+              "text": "What the client actually holds",
+              "level": 4
+            },
+            {
+              "id": "_login_is_two_steps",
+              "text": "Login is two steps",
+              "level": 4
+            },
+            {
+              "id": "_silent_restore_at_boot",
+              "text": "Silent restore at boot",
+              "level": 4
+            },
+            {
+              "id": "_refresh_and_why_it_is_deduplicated",
+              "text": "Refresh, and why it is deduplicated",
+              "level": 4
+            },
+            {
+              "id": "_the_401_path_in_the_error_interceptor",
+              "text": "The 401 path in the error interceptor",
+              "level": 4
+            },
+            {
+              "id": "_logout",
+              "text": "Logout",
+              "level": 4
+            },
+            {
+              "id": "_what_the_route_guard_checks",
+              "text": "What the route guard checks",
+              "level": 4
+            },
+            {
+              "id": "device-fingerprint",
+              "text": "Device Fingerprint",
+              "level": 3
+            },
+            {
+              "id": "_how_the_identifier_is_minted_and_stored",
+              "text": "How the identifier is minted and stored",
+              "level": 4
+            },
+            {
+              "id": "_how_it_reaches_the_bff",
+              "text": "How it reaches the BFF",
+              "level": 4
+            },
+            {
+              "id": "_what_the_binding_buys",
+              "text": "What the binding buys",
+              "level": 4
+            },
+            {
+              "id": "_client_handling_of_a_mismatch",
+              "text": "Client handling of a mismatch",
+              "level": 4
+            },
+            {
+              "id": "_what_this_does_and_does_not_defend_against",
+              "text": "What this does and does not defend against",
+              "level": 4
+            },
+            {
+              "id": "step-up",
+              "text": "Step-Up Challenges",
+              "level": 3
+            },
+            {
+              "id": "_the_client_side_shape_of_every_flow",
+              "text": "The client-side shape of every flow",
+              "level": 4
+            },
+            {
+              "id": "_screens_that_use_the_pattern",
+              "text": "Screens that use the pattern",
+              "level": 4
+            },
+            {
+              "id": "_idempotency_on_money_movement",
+              "text": "Idempotency on money movement",
+              "level": 4
+            },
+            {
+              "id": "_denials",
+              "text": "Denials",
+              "level": 4
+            },
+            {
+              "id": "_pii_and_secrets_on_the_client",
+              "text": "PII and Secrets on the Client",
+              "level": 3
+            },
+            {
+              "id": "_what_lives_in_browser_storage",
+              "text": "What lives in browser storage",
+              "level": 4
+            },
+            {
+              "id": "_sensitive_inputs",
+              "text": "Sensitive inputs",
+              "level": 4
+            },
+            {
+              "id": "_audit_events_are_scrubbed_before_they_leave_the_browser",
+              "text": "Audit events are scrubbed before they leave the browser",
+              "level": 4
+            },
+            {
+              "id": "_errors_never_display_raw_payloads",
+              "text": "Errors never display raw payloads",
+              "level": 4
+            },
+            {
+              "id": "_test_coverage",
+              "text": "Test coverage",
+              "level": 4
+            }
+          ]
+        },
+        {
+          "slug": "features",
+          "title": "Features",
+          "file": "frontend-features.html",
+          "words": 7371,
+          "headings": [
+            {
+              "id": "_authentication",
+              "text": "Authentication",
+              "level": 3
+            },
+            {
+              "id": "_purpose",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_screens_and_routes",
+              "text": "Screens and routes",
+              "level": 4
+            },
+            {
+              "id": "_flows",
+              "text": "Flows",
+              "level": 4
+            },
+            {
+              "id": "_bff_endpoints_used",
+              "text": "BFF endpoints used",
+              "level": 4
+            },
+            {
+              "id": "_registration",
+              "text": "Registration",
+              "level": 3
+            },
+            {
+              "id": "_purpose_2",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_screens_and_routes_2",
+              "text": "Screens and routes",
+              "level": 4
+            },
+            {
+              "id": "_flows_2",
+              "text": "Flows",
+              "level": 4
+            },
+            {
+              "id": "_bff_endpoints_used_2",
+              "text": "BFF endpoints used",
+              "level": 4
+            },
+            {
+              "id": "_test_coverage_2",
+              "text": "Test coverage",
+              "level": 4
+            },
+            {
+              "id": "_account_summary",
+              "text": "Account summary",
+              "level": 3
+            },
+            {
+              "id": "_purpose_3",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_screens_and_routes_3",
+              "text": "Screens and routes",
+              "level": 4
+            },
+            {
+              "id": "_flows_3",
+              "text": "Flows",
+              "level": 4
+            },
+            {
+              "id": "_bff_endpoints_used_3",
+              "text": "BFF endpoints used",
+              "level": 4
+            },
+            {
+              "id": "_test_coverage_3",
+              "text": "Test coverage",
+              "level": 4
+            },
+            {
+              "id": "_savings",
+              "text": "Savings",
+              "level": 3
+            },
+            {
+              "id": "_purpose_4",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_screens_and_routes_4",
+              "text": "Screens and routes",
+              "level": 4
+            },
+            {
+              "id": "_flows_4",
+              "text": "Flows",
+              "level": 4
+            },
+            {
+              "id": "_bff_endpoints_used_4",
+              "text": "BFF endpoints used",
+              "level": 4
+            },
+            {
+              "id": "_test_coverage_4",
+              "text": "Test coverage",
+              "level": 4
+            },
+            {
+              "id": "_loans",
+              "text": "Loans",
+              "level": 3
+            },
+            {
+              "id": "_purpose_5",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_screens_and_routes_5",
+              "text": "Screens and routes",
+              "level": 4
+            },
+            {
+              "id": "_flows_5",
+              "text": "Flows",
+              "level": 4
+            },
+            {
+              "id": "_bff_endpoints_used_5",
+              "text": "BFF endpoints used",
+              "level": 4
+            },
+            {
+              "id": "_test_coverage_5",
+              "text": "Test coverage",
+              "level": 4
+            },
+            {
+              "id": "_transfers",
+              "text": "Transfers",
+              "level": 3
+            },
+            {
+              "id": "_purpose_6",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_screens_and_routes_6",
+              "text": "Screens and routes",
+              "level": 4
+            },
+            {
+              "id": "_flows_6",
+              "text": "Flows",
+              "level": 4
+            },
+            {
+              "id": "_bff_endpoints_used_6",
+              "text": "BFF endpoints used",
+              "level": 4
+            },
+            {
+              "id": "_test_coverage_6",
+              "text": "Test coverage",
+              "level": 4
+            },
+            {
+              "id": "_beneficiaries",
+              "text": "Beneficiaries",
+              "level": 3
+            },
+            {
+              "id": "_purpose_7",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_screens_and_routes_7",
+              "text": "Screens and routes",
+              "level": 4
+            },
+            {
+              "id": "_flows_7",
+              "text": "Flows",
+              "level": 4
+            },
+            {
+              "id": "_bff_endpoints_used_7",
+              "text": "BFF endpoints used",
+              "level": 4
+            },
+            {
+              "id": "profile-settings",
+              "text": "Profile and settings",
+              "level": 3
+            },
+            {
+              "id": "_purpose_8",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_screens_and_routes_8",
+              "text": "Screens and routes",
+              "level": 4
+            },
+            {
+              "id": "_flows_8",
+              "text": "Flows",
+              "level": 4
+            },
+            {
+              "id": "_bff_endpoints_used_8",
+              "text": "BFF endpoints used",
+              "level": 4
+            },
+            {
+              "id": "_consent_screen",
+              "text": "Consent screen",
+              "level": 3
+            },
+            {
+              "id": "_purpose_9",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_screens_and_routes_9",
+              "text": "Screens and routes",
+              "level": 4
+            },
+            {
+              "id": "_flows_9",
+              "text": "Flows",
+              "level": 4
+            },
+            {
+              "id": "_relation_to_the_open_banking_feature",
+              "text": "Relation to the open banking feature",
+              "level": 4
+            },
+            {
+              "id": "_demo_screen",
+              "text": "Demo screen",
+              "level": 3
+            },
+            {
+              "id": "_purpose_10",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_screens_and_routes_10",
+              "text": "Screens and routes",
+              "level": 4
+            },
+            {
+              "id": "_flows_10",
+              "text": "Flows",
+              "level": 4
+            },
+            {
+              "id": "_bff_endpoints_used_9",
+              "text": "BFF endpoints used",
+              "level": 4
+            },
+            {
+              "id": "_shared_ui_layer",
+              "text": "Shared UI layer",
+              "level": 3
+            },
+            {
+              "id": "_purpose_11",
+              "text": "Purpose",
+              "level": 4
+            },
+            {
+              "id": "_shared_components",
+              "text": "Shared components",
+              "level": 4
+            },
+            {
+              "id": "_styling_architecture",
+              "text": "Styling architecture",
+              "level": 4
+            },
+            {
+              "id": "_the_i18n_pipeline",
+              "text": "The i18n pipeline",
+              "level": 4
+            },
+            {
+              "id": "_the_error_to_toast_pipeline",
+              "text": "The error-to-toast pipeline",
+              "level": 4
+            },
+            {
+              "id": "_client_side_audit_service",
+              "text": "Client-side audit service",
+              "level": 4
+            }
+          ]
+        },
+        {
+          "slug": "development",
+          "title": "Development",
+          "file": "frontend-development.html",
+          "words": 1592,
+          "headings": [
+            {
+              "id": "_build_and_test",
+              "text": "Build and Test",
+              "level": 3
+            },
+            {
+              "id": "_npm_script_inventory",
+              "text": "npm script inventory",
+              "level": 4
+            },
+            {
+              "id": "_dev_server",
+              "text": "Dev server",
+              "level": 4
+            },
+            {
+              "id": "_unit_tests",
+              "text": "Unit tests",
+              "level": 4
+            },
+            {
+              "id": "_end_to_end_tests_playwright",
+              "text": "End-to-end tests (Playwright)",
+              "level": 4
+            },
+            {
+              "id": "_regenerating_the_typescript_client",
+              "text": "Regenerating the TypeScript client",
+              "level": 4
+            },
+            {
+              "id": "_lint_format_and_i18n_check",
+              "text": "Lint, format, and i18n check",
+              "level": 4
+            },
+            {
+              "id": "serving",
+              "text": "Serving the Built App",
+              "level": 3
+            },
+            {
+              "id": "_the_docker_image",
+              "text": "The Docker image",
+              "level": 4
+            },
+            {
+              "id": "_the_nginx_configuration",
+              "text": "The nginx configuration",
+              "level": 4
+            },
+            {
+              "id": "_compose_topology",
+              "text": "Compose topology",
+              "level": 4
+            },
+            {
+              "id": "_transport_security",
+              "text": "Transport security",
+              "level": 4
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
